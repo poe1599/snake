@@ -14,6 +14,28 @@
         </div>
       </div>
     </div>
+
+    <div class="control">
+      <button
+        class="control__toggle"
+        :class="{ 'control__toggle--active': isControlClose }"
+        @click="isControlClose = !isControlClose"
+      ></button>
+      <div
+        class="control__wrap"
+        :class="{ 'control__wrap--close': isControlClose }"
+      >
+        <button
+          class="control__btn"
+          :class="`${isLoop ? 'control__btn--isLoop' : 'control__btn--once'}`"
+          @click="isLoop = !isLoop"
+        ></button>
+        <button
+          class="control__btn control__btn--reset"
+          @click="reset"
+        ></button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -31,6 +53,10 @@ export default {
         pos: [],
       },
       bug: { x: 0, y: 0 },
+      intervalCode: null,
+      isLoop: true,
+      isOnReset: false,
+      isControlClose: true,
     };
   },
   computed: {
@@ -44,10 +70,8 @@ export default {
   mounted() {
     window.addEventListener("resize", this.resize);
     this.resize();
+    this.init();
     this.start();
-    setInterval(() => {
-      this.snakeMove();
-    }, 20);
   },
   beforeDestroy() {
     window.removeEventListener("resize", this.resize);
@@ -64,10 +88,24 @@ export default {
         y: Math.floor(Math.random() * this.Y) + 1,
       };
     },
-    start() {
+    init() {
       this.snake.pos = [];
       this.snake.pos.push(this.ranPos());
       this.setBug();
+    },
+    start() {
+      this.isOnReset = false;
+      this.intervalCode = setInterval(() => {
+        this.snakeMove();
+      }, 41.6);
+    },
+    stop() {
+      clearInterval(this.intervalCode);
+    },
+    reset() {
+      this.stop();
+      this.init();
+      this.start();
     },
     setBug() {
       this.bug = this.ranPos();
@@ -109,7 +147,12 @@ export default {
 
       // 不存在合法蛇頭則重來
       if (headList2.length === 0) {
-        this.start();
+        this.stop();
+        if (!this.isLoop) return;
+        this.isOnReset = true;
+        setTimeout(() => {
+          this.reset();
+        }, 5000);
         return;
       }
 
@@ -119,12 +162,14 @@ export default {
         const newD = Math.abs(i.x - Bx) + Math.abs(i.y - By);
         if (newD < d) newSnakeHead = i;
       });
-      if (newSnakeHead === null) newSnakeHead = headList2[0];
+      if (newSnakeHead === null)
+        newSnakeHead = headList2[Math.floor(Math.random() * headList2.length)];
 
       this.snake.pos.unshift(newSnakeHead);
       this.snake.pos.pop();
     },
     state(x, y) {
+      if (this.isOnReset) return "s__li--onReset";
       if (this.snake.pos.length === 0) return "";
       const isSnake = this.snake.pos.some((i) => i.x === x && i.y === y);
       const isSnakeHead =
@@ -148,6 +193,7 @@ export default {
   align-items: center;
   background: url("~@/assets/space.jpg") center center no-repeat;
   background-size: cover;
+  position: relative;
 }
 
 .s {
@@ -159,17 +205,96 @@ export default {
   }
 
   &__li {
+    transition: 0.5s;
     &--snake {
-      background: rgb(253, 253, 253);
+      background: rgb(252, 223, 214);
     }
 
     &--snakeHead {
-      background: rgb(255, 222, 212);
+      background: rgb(253, 74, 19);
+      transition: 0s;
     }
 
     &--bug {
-      background: rgb(14, 233, 7);
+      background: rgb(9, 255, 0);
+    }
+
+    &--onReset {
+      transition: 5s;
     }
   }
+}
+
+.control {
+  position: absolute;
+  top: 5vh;
+  right: 5vw;
+  width: 50px;
+  text-align: center;
+
+  &__toggle {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    padding: 0;
+    transition: 1s;
+    transform: translateY(70vh);
+    margin-bottom: 16px;
+    cursor: pointer;
+
+    &--active {
+      transform: translateY(0vh);
+    }
+  }
+
+  &__wrap {
+    overflow: hidden;
+    transition: 0.5s;
+    max-height: 100vh;
+
+    &--close {
+      max-height: 0;
+    }
+  }
+
+  &__btn {
+    width: 100%;
+    height: 2vw;
+    margin-bottom: 2vw;
+    text-align: center;
+    padding: 0;
+    transition: 0.3s;
+    background: #000;
+    color: chocolate;
+    min-height: 30px;
+    cursor: pointer;
+
+    &--isLoop {
+      &::before {
+        content: "Loop";
+      }
+    }
+
+    &--once {
+      &::before {
+        content: "Once";
+      }
+    }
+
+    &--reset {
+      &::before {
+        content: "Reset";
+      }
+    }
+  }
+
+  &__btn:hover {
+    @extend %BtnHover;
+  }
+}
+%BtnHover {
+  background: rgb(253, 74, 19);
+  color: black;
 }
 </style>
